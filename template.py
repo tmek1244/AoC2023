@@ -1,9 +1,9 @@
 def task1(input):
-    pass
+    return 0
 
 
 def task2(input):
-    pass
+    return 0
 
 
 def read_input():
@@ -13,5 +13,5 @@ def read_input():
 
 if __name__ == '__main__':
     input = read_input()
-    task1(input)
-    task2(input)
+    print(task1(input))
+    print(task2(input))
