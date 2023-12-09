@@ -18,28 +18,83 @@ def parse(input):
 def task1(input):
     seeds, map_list = parse(input)
 
-    # print(seeds, map_list)
     locations = []
 
     for seed_str in seeds:
         current_id = int(seed_str)
-        # print(current_id)
         for map in map_list:
             for entry in map:
-                # print(int(entry[1]), int(entry[1]) + int(entry[2]))
                 if int(entry[1]) <= current_id < int(entry[1]) + int(entry[2]):
                     current_id = current_id - int(entry[1]) + int(entry[0])
                     break
                 elif int(entry[1]) > current_id:
                     break
-            # print(current_id)
         locations.append(current_id)
-        # print()
     return min(locations)
 
 
+class Interval:
+    def __init__(self, start, end):
+        self.start = start
+        self.end = end
+
+    def __repr__(self):
+        return f'[{self.start}, {self.end}]'
+
+
+class Mapping:
+    def __init__(self, source, destination, number) -> None:
+        self.start = source
+        self.end = source + number - 1
+        self.to_start = destination
+        self.to_end = destination + number - 1
+
+    def __repr__(self) -> str:
+        return f'{self.start} - {self.end} -> {self.to_start} - {self.to_end}'
+
+
 def task2(input):
-    return 0
+    seeds, map_list = parse(input)
+
+    current_intervals = [
+        Interval(int(seeds[2*i]), int(seeds[2*i]) + int(seeds[2*i+1]) - 1)
+        for i in range(len(seeds)//2)]
+
+    for map in map_list:
+        new_lvl_intervals = []
+        for _mapping in map:
+            mapping = Mapping(int(_mapping[1]), int(_mapping[0]), int(_mapping[2]))
+            new_intervals = []
+            for interval in current_intervals:
+                if interval.start >= mapping.start and interval.end <= mapping.end:
+                    new_lvl_intervals.append(Interval(
+                        mapping.to_start + interval.start - mapping.start,
+                        mapping.to_start + interval.end - mapping.start
+                    ))
+                elif mapping.end >= interval.start >= mapping.start and interval.end > mapping.end:
+                    new_lvl_intervals.append(Interval(
+                        mapping.to_start + interval.start - mapping.start,
+                        mapping.to_end))
+                    new_intervals.append(
+                        Interval(mapping.end + 1, interval.end))
+                elif interval.start < mapping.start and mapping.start <= interval.end <= mapping.end:
+                    new_intervals.append(Interval(interval.start, mapping.start - 1))
+                    new_lvl_intervals.append(Interval(
+                        mapping.to_start,
+                        mapping.to_start + interval.end - mapping.start
+                    ))
+                elif interval.start < mapping.start and interval.end > mapping.end:
+                    new_intervals.append(Interval(interval.start, mapping.start - 1))
+                    new_lvl_intervals.append(Interval(
+                        mapping.to_start,
+                        mapping.to_end))
+                    new_intervals.append(
+                        Interval(mapping.end + 1, interval.end))
+                else:
+                    new_intervals.append(interval)
+            current_intervals = new_intervals
+        current_intervals.extend(new_lvl_intervals)
+    return min([interval.start for interval in current_intervals])
 
 
 def read_input():
