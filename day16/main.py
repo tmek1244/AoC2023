@@ -87,7 +87,6 @@ def task1(input, starting_light=Light((0, -1), (0, 0))):
     lights = [starting_light]
     while lights:
         light = lights.pop()
-        # print(light.from_field, light.to_field)
 
         if (light.to_field[0] < 0 or light.to_field[0] >= len(map)
                 or light.to_field[1] < 0 or light.to_field[1] >= len(map[0])):
@@ -103,10 +102,6 @@ def task1(input, starting_light=Light((0, -1), (0, 0))):
         for j in range(len(light_map[0])):
             if light_map[i][j]:
                 sum += 1
-        #         print(len(light_map[i][j]), end='')
-        #     else:
-        #         print('.', end='')
-        # print()
 
     return sum
 
