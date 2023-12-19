@@ -1,14 +1,6 @@
 import copy
 
 
-DIRECTIONS = {
-    'R': (0, 1),
-    'D': (1, 0),
-    'L': (0, -1),
-    'U': (-1, 0),
-}
-
-
 def sum_tuples(a, b):
     return (a[0] + b[0], a[1] + b[1])
 
