@@ -8,6 +8,9 @@ LOW = False
 
 QUEUE = []
 
+GLOBAL_COUNTER = 0
+PRESS_COUNTER = 0
+
 
 class Device:
     def __init__(self, id):
@@ -54,16 +57,30 @@ class Conjunction(Device):
         self.state = {}
         self.id = id
         self.receivers = []
+        self.counter = 0
+        self.prev_counter = 0
+        self.prev_send = None
 
     def add_as_receiver(self, sender):
         self.state[sender.id] = OFF
 
     def process(self, signal, sender):
+        self.counter += 1
         self.state[sender.id] = signal
         if all(self.state.values()):
+            if self.id in ['tx', 'vg', 'kp', 'gc'] and self.prev_send == ON:
+                print(self.id, 'OFF', PRESS_COUNTER, PRESS_COUNTER - self.prev_counter)
+                # print(self.state, self.counter - self.prev_counter)
+                self.prev_counter = PRESS_COUNTER
             state = OFF
         else:
+            if self.id in ['tx', 'vg', 'kp', 'gc']:
+                print(self.id, 'ON', PRESS_COUNTER, PRESS_COUNTER - self.prev_counter)
+                # print(self.state, self.counter - self.prev_counter)
+                self.prev_counter = PRESS_COUNTER
             state = ON
+
+        self.prev_send = state
 
         for receiver in self.receivers:
             QUEUE.append((self, receiver, state))
@@ -94,21 +111,45 @@ def process_queue():
         LOW: 0,
         HIGH: 0,
     }
+    global GLOBAL_COUNTER
     while QUEUE:
         sender, receiver, signal = QUEUE.pop(0)
+        GLOBAL_COUNTER += 1
         counter[signal] += 1
         receiver.process(signal, sender)
     return counter
 
 
+# def get_states(devices):
+#     states = []
+#     for device in devices.values():
+#         if isinstance(device.state, bool):
+#             states.append((device.state))
+#         else:
+#             states.append(tuple(device.state.values()))
+#     return tuple(states)
+
+
 def get_states(devices):
-    states = []
+    states = {}
     for device in devices.values():
         if isinstance(device.state, bool):
-            states.append((device.state))
+            states[device.id] = device.state
         else:
-            states.append(tuple(device.state.values()))
-    return tuple(states)
+            states[device.id] = dict(device.state)
+    return states
+
+
+def print_differences(states1, states2):
+    for id, state in states1.items():
+        if isinstance(state, bool):
+            if state != states2[id]:
+                print(f'{id}: {state} -> {states2[id]}')
+        else:
+            # print(state, states2[id])
+            for id2, state2 in state.items():
+                if state2 != states2[id][id2]:
+                    print(f'{id} {id2}: {state2} -> {states2[id][id2]}')
 
 
 def task1(input):
@@ -152,6 +193,24 @@ def task1(input):
     return counter[HIGH] * counter[LOW]
 
 
+def is_parent(dev, visited=None, looking_for='rx'):
+    if dev.id == looking_for:
+        return True, [dev.id]
+    child_parents = []
+    is_this_parent = False
+    for receiver in dev.receivers:
+        if receiver.id in visited:
+            continue
+        res = is_parent(receiver, visited + [dev.id], looking_for)
+        if res[0]:
+            is_this_parent = True
+            child_parents.extend(res[1])
+
+    if is_this_parent:
+        return True, [dev.id] + child_parents
+    return False, []
+
+
 def task2(input):
     devices = {}
     states = set()
@@ -178,22 +237,55 @@ def task2(input):
                     devices[receiver] = (Final(receiver) if receiver == 'rx'
                                          else Device(receiver))
                 devices[id].add_receivers([devices[receiver]])
-    i = 0
-    while True:
-        i += 1
-        if i % 1_000_000 == 0:
-            print(f'Iteration {i}')
-        for receiver in broadcaster_receivers:
-            QUEUE.append(('broadcaster', receiver, LOW))
 
+    # vh -> gc
+    # sp -> kp
+    # lg -> vg
+    # mh -> tx
+
+    mapping = {
+        'vh': 'gc',
+        'sp': 'kp',
+        'lg': 'vg',
+        'mh': 'tx',
+    }
+
+    starting = 'mh'
+
+    for dev in broadcaster_receivers:
+        print(is_parent(dev, visited=[], looking_for=mapping[starting]))
+    global PRESS_COUNTER
+    prev_state = get_states(devices)
+    # prev_state = None
+    print(devices[mapping[starting]].state)
+    while PRESS_COUNTER < 10_0000:
+        PRESS_COUNTER += 1
+        # if i % 1_000_000 == 0:
+        #     print(f'Iteration {i}')
+        #     print_differences(prev_state, get_states(devices))
+        #     prev_state = get_states(devices)
+        # print(devices[mapping[starting]].state)
+
+        for receiver in broadcaster_receivers:
+            # if receiver.id == starting:
+            QUEUE.append(('broadcaster', receiver, LOW))
         process_queue()
-        # if get_states(devices) in states:
-        #     print('ALREADY SEEN')
-        #     return i
-        # else:
-        #     states.add(get_states(devices))
-        if devices['rx'].state == ON:
-            return i
+        # print("After iteration", i)
+        # print(f'tx: {devices["tx"].counter}')
+        # print(f'vg: {devices["vg"].counter}')
+        # print(f'kp: {devices["kp"].counter}')
+        # print(f'gc: {devices["gc"].counter}')
+        # if not all(devices[mapping[starting]].state.values()):
+        #     print(i)
+        # print(devices[mapping[starting]].state)
+        # print(get_states(devices))
+
+        # state = get_states(devices)
+        # if prev_state:
+        #     print_differences(prev_state, state)
+        # prev_state = state
+        # print("===================")
+    # print(i)
 
     return -1
 
@@ -205,5 +297,5 @@ def read_input():
 
 if __name__ == '__main__':
     input = read_input()
-    print(task1(input))
+    # print(task1(input))
     print(task2(input))
